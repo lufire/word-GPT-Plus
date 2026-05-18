@@ -86,7 +86,7 @@ export const availableModelsForGemini: string[] = [
   'gemini-2.5-flash',
   'gemini-2.5-flash-lite',
   'gemini-2.0-flash',
-  'gemini-2.0-flash-lite'
+  'gemini-2.0-flash-lite',
 ]
 
 // Ollama API 可用的模型
