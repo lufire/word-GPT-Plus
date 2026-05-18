@@ -80,76 +80,66 @@
       </div>
 
       <!-- Chat Messages Container -->
-      <div
-        ref="messagesContainer"
-        class="flex flex-1 flex-col gap-4 overflow-y-auto rounded-md border border-border-secondary bg-surface p-2 shadow-sm"
-      >
-        <div
-          v-if="history.length === 0"
-          class="flex h-full flex-col items-center justify-center gap-4 p-8 text-center text-accent"
-        >
-          <Sparkles :size="32" />
-          <p class="font-semibold text-main">
-            {{ $t('emptyTitle') }}
-          </p>
-          <p class="text-xs font-semibold text-secondary">
-            {{ $t('emptySubtitle') }}
-          </p>
-        </div>
-
-        <div
-          v-for="(msg, index) in displayHistory"
-          :key="msg.id || index"
-          class="group flex items-end gap-4 [.user]:flex-row-reverse"
-          :class="msg instanceof AIMessage ? 'assistant' : 'user'"
-        >
+      <div ref="messagesContainer" class="flex-1 overflow-y-auto px-4 py-2">
+        <div class="flex flex-col gap-5 py-4 pb-[80px]">
           <div
-            class="flex min-w-0 flex-1 flex-col gap-1 group-[.assistant]:items-start group-[.assistant]:text-left group-[.user]:items-end group-[.user]:text-left"
+            v-for="(msg, index) in displayHistory"
+            :key="msg.id || index"
+            class="group flex items-end gap-4 [.user]:flex-row-reverse"
+            :class="msg instanceof AIMessage ? 'assistant' : 'user'"
           >
             <div
-              class="group max-w-[95%] rounded-md border border-border-secondary p-1 text-sm leading-[1.4] wrap-break-word whitespace-pre-wrap text-main/90 shadow-sm group-[.assistant]:bg-bg-tertiary group-[.assistant]:text-left group-[.user]:bg-accent/10"
+              class="flex min-w-0 flex-1 flex-col gap-1 group-[.assistant]:items-start group-[.assistant]:text-left group-[.user]:items-end group-[.user]:text-left"
             >
-              <template v-for="(segment, idx) in renderSegments(msg)" :key="idx">
-                <span v-if="segment.type === 'text'">{{ segment.text.trim() }}</span>
-                <details v-else class="mb-1 rounded-sm border border-border-secondary bg-bg-secondary">
-                  <summary class="cursor-pointer list-none p-1 text-sm font-semibold text-secondary">
-                    Thought process
-                  </summary>
-                  <pre class="m-0 p-1 text-xs wrap-break-word whitespace-pre-wrap text-secondary">{{
-                    segment.text.trim()
-                  }}</pre>
-                </details>
-              </template>
+              <div
+                class="group max-w-[95%] rounded-md border border-border-secondary p-1 text-sm leading-[1.4] wrap-break-word whitespace-pre-wrap text-main/90 shadow-sm group-[.assistant]:bg-bg-tertiary group-[.assistant]:text-left group-[.user]:bg-accent/10"
+              >
+                <template v-for="(segment, idx) in renderSegments(msg)" :key="idx">
+                  <span v-if="segment.type === 'text'">{{ segment.text.trim() }}</span>
+                  <details v-else class="mb-1 rounded-sm border border-border-secondary bg-bg-secondary">
+                    <summary class="cursor-pointer list-none p-1 text-sm font-semibold text-secondary">
+                      Thought process
+                    </summary>
+                    <pre class="m-0 p-1 text-xs wrap-break-word whitespace-pre-wrap text-secondary">{{
+                      segment.text.trim()
+                    }}</pre>
+                  </details>
+                </template>
+              </div>
+              <div v-if="msg instanceof AIMessage" class="flex gap-1">
+                <CustomButton
+                  :title="t('replaceSelectedText')"
+                  text=""
+                  :icon="FileText"
+                  type="secondary"
+                  class="bg-surface! p-1.5! text-secondary!"
+                  :icon-size="12"
+                  @click="insertToDocument(cleanMessageText(msg), 'replace')"
+                />
+                <CustomButton
+                  :title="t('appendToSelection')"
+                  text=""
+                  :icon="Plus"
+                  type="secondary"
+                  class="bg-surface! p-1.5! text-secondary!"
+                  :icon-size="12"
+                  @click="insertToDocument(cleanMessageText(msg), 'append')"
+                />
+                <CustomButton
+                  :title="t('copyToClipboard')"
+                  text=""
+                  :icon="Copy"
+                  type="secondary"
+                  class="bg-surface! p-1.5! text-secondary!"
+                  :icon-size="12"
+                  @click="copyToClipboard(cleanMessageText(msg))"
+                />
+              </div>
             </div>
-            <div v-if="msg instanceof AIMessage" class="flex gap-1">
-              <CustomButton
-                :title="t('replaceSelectedText')"
-                text=""
-                :icon="FileText"
-                type="secondary"
-                class="bg-surface! p-1.5! text-secondary!"
-                :icon-size="12"
-                @click="insertToDocument(cleanMessageText(msg), 'replace')"
-              />
-              <CustomButton
-                :title="t('appendToSelection')"
-                text=""
-                :icon="Plus"
-                type="secondary"
-                class="bg-surface! p-1.5! text-secondary!"
-                :icon-size="12"
-                @click="insertToDocument(cleanMessageText(msg), 'append')"
-              />
-              <CustomButton
-                :title="t('copyToClipboard')"
-                text=""
-                :icon="Copy"
-                type="secondary"
-                class="bg-surface! p-1.5! text-secondary!"
-                :icon-size="12"
-                @click="copyToClipboard(cleanMessageText(msg))"
-              />
-            </div>
+          </div>
+          <div v-if="loading && agentStatus" class="flex items-center gap-2 text-sm text-secondary animate-pulse">
+            <LoaderCircle class="w-4 h-4 animate-spin" />
+            <span>{{ agentStatus }}</span>
           </div>
         </div>
       </div>
@@ -259,6 +249,7 @@ import {
   Sparkle,
   Sparkles,
   Square,
+  LoaderCircle,
 } from 'lucide-vue-next'
 import { v4 as uuidv4 } from 'uuid'
 import { computed, nextTick, onBeforeMount, ref, watch } from 'vue'
@@ -409,6 +400,7 @@ const useSelectedText = useStorage(localStorageKey.useSelectedText, true)
 const insertType = ref<insertTypes>('replace')
 
 const errorIssue = ref<boolean | string | null>(false)
+const agentStatus = ref<string>('')
 
 const displayHistory = computed(() => {
   return history.value.filter(msg => !(msg instanceof SystemMessage))
@@ -543,6 +535,7 @@ function stopGeneration() {
     abortController.value = null
   }
   loading.value = false
+  agentStatus.value = ''
 }
 
 function adjustTextareaHeight() {
@@ -586,6 +579,7 @@ async function sendMessage() {
   scrollToBottom()
 
   loading.value = true
+  agentStatus.value = 'Thinking...'
   abortController.value = new AbortController()
 
   try {
@@ -600,6 +594,7 @@ async function sendMessage() {
     }
   } finally {
     loading.value = false
+    agentStatus.value = ''
     abortController.value = null
   }
 }
@@ -631,6 +626,7 @@ async function applyQuickAction(actionKey: keyof typeof buildInPrompt) {
   scrollToBottom()
 
   loading.value = true
+  agentStatus.value = 'Thinking...'
   abortController.value = new AbortController()
 
   try {
@@ -646,6 +642,7 @@ async function applyQuickAction(actionKey: keyof typeof buildInPrompt) {
     }
   } finally {
     loading.value = false
+    agentStatus.value = ''
     abortController.value = null
   }
 }
@@ -671,6 +668,36 @@ Do not perform destructive actions (like clearing the whole document) unless exp
 
 const standardPrompt = (lang: string) =>
   `You are a helpful Microsoft Word specialist. Help users with drafting, brainstorming, and Word-related questions. Reply in ${lang}.`
+
+const toolActionNames: Record<string, string> = {
+  getSelectedText: 'Reading selected text...',
+  getDocumentContent: 'Reading document content...',
+  insertText: 'Writing text into document...',
+  replaceSelectedText: 'Replacing text in document...',
+  appendText: 'Appending text to document...',
+  insertParagraph: 'Inserting paragraph...',
+  formatText: 'Formatting document text...',
+  searchAndReplace: 'Searching and replacing text...',
+  getDocumentProperties: 'Reading document properties...',
+  insertTable: 'Creating a table...',
+  insertList: 'Creating a list...',
+  deleteText: 'Deleting text...',
+  clearFormatting: 'Clearing text formatting...',
+  setFontName: 'Changing font...',
+  insertPageBreak: 'Inserting page break...',
+  getRangeInfo: 'Analyzing document structure...',
+  selectText: 'Selecting text...',
+  insertImage: 'Inserting image...',
+  getTableInfo: 'Analyzing table data...',
+  insertBookmark: 'Creating bookmark...',
+  goToBookmark: 'Navigating to bookmark...',
+  insertContentControl: 'Inserting content control...',
+  findText: 'Searching for text...',
+  fetchWebContent: 'Browsing the web...',
+  searchWeb: 'Searching the web...',
+  getCurrentDate: 'Checking current date...',
+  calculateMath: 'Calculating math expression...',
+}
 
 async function processChat(userMessage: HumanMessage, systemMessage?: string) {
   const settings = settingForm.value
@@ -761,20 +788,12 @@ async function processChat(userMessage: HumanMessage, systemMessage?: string) {
       },
       onToolCall: (toolName: string, _args: any) => {
         // Show tool call in UI
-        const lastIndex = history.value.length - 1
-        const currentContent = getMessageText(history.value[lastIndex])
-        history.value[lastIndex] = new AIMessage(currentContent + `\n\n🔧 Calling tool: ${toolName}...`)
+        agentStatus.value = toolActionNames[toolName] || `Using ${toolName}...`
         scrollToBottom()
       },
       onToolResult: (toolName: string, _result: string) => {
         // Update with tool result
-        const lastIndex = history.value.length - 1
-        const currentContent = getMessageText(history.value[lastIndex])
-        const updatedContent = currentContent.replace(
-          `🔧 Calling tool: ${toolName}...`,
-          `✅ Tool ${toolName} completed`,
-        )
-        history.value[lastIndex] = new AIMessage(updatedContent)
+        agentStatus.value = 'Analyzing results...'
         scrollToBottom()
       },
     })
