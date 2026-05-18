@@ -1,4 +1,5 @@
 import { BaseChatModel } from '@langchain/core/language_models/chat_models'
+import { BaseMessage } from '@langchain/core/messages'
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai'
 import { ChatGroq } from '@langchain/groq'
 // import { MemorySaver } from '@langchain/langgraph'
@@ -73,6 +74,81 @@ const ModelCreators: Record<string, (opts: any) => BaseChatModel> = {
 
 // const checkpointer = new MemorySaver()
 const checkpointer = new IndexedDBSaver()
+
+export function sanitizeMessages(messages: BaseMessage[]): BaseMessage[] {
+  const systemMessages: BaseMessage[] = []
+  const otherMessages: BaseMessage[] = []
+
+  for (const msg of messages) {
+    if (msg._getType() === 'system' || msg.constructor.name === 'SystemMessage') {
+      systemMessages.push(msg)
+    } else {
+      otherMessages.push(msg)
+    }
+  }
+
+  if (systemMessages.length === 0) {
+    return otherMessages
+  }
+
+  // Keep the LAST system message (most recent)
+  const primarySystemMessage = systemMessages[systemMessages.length - 1]
+  return [primarySystemMessage, ...otherMessages]
+}
+
+function wrapModelWithSanitizer(model: BaseChatModel): BaseChatModel {
+  const originalInvoke = model.invoke.bind(model)
+  model.invoke = async (input: any, options?: any) => {
+    let sanitizedInput = input
+    if (Array.isArray(input)) {
+      sanitizedInput = sanitizeMessages(input)
+    }
+    return originalInvoke(sanitizedInput, options)
+  }
+
+  const originalStream = model.stream.bind(model)
+  model.stream = async function* (input: any, options?: any) {
+    let sanitizedInput = input
+    if (Array.isArray(input)) {
+      sanitizedInput = sanitizeMessages(input)
+    }
+    yield* originalStream(sanitizedInput, options)
+  }
+
+  if (typeof (model as any)._generate === 'function') {
+    const originalGenerate = (model as any)._generate.bind(model)
+    ;(model as any)._generate = async (messages: BaseMessage[], options: any, runManager: any) => {
+      return originalGenerate(sanitizeMessages(messages), options, runManager)
+    }
+  }
+
+  // Handle bindTools
+  if (typeof model.bindTools === 'function') {
+    const originalBindTools = model.bindTools.bind(model)
+    model.bindTools = (...args: any[]) => {
+      const boundModel = originalBindTools(...args)
+      const boundInvoke = boundModel.invoke.bind(boundModel)
+      boundModel.invoke = async (input: any, options?: any) => {
+        let sanitizedInput = input
+        if (Array.isArray(input)) {
+          sanitizedInput = sanitizeMessages(input)
+        }
+        return boundInvoke(sanitizedInput, options)
+      }
+      const boundStream = boundModel.stream.bind(boundModel)
+      boundModel.stream = async function* (input: any, options?: any) {
+        let sanitizedInput = input
+        if (Array.isArray(input)) {
+          sanitizedInput = sanitizeMessages(input)
+        }
+        yield* boundStream(sanitizedInput, options)
+      }
+      return boundModel
+    }
+  }
+
+  return model
+}
 
 function extractErrorMessage(error: unknown): string {
   if (error instanceof Error && error.message) {
@@ -281,7 +357,7 @@ export async function getChatResponse(options: ProviderOptions) {
   if (!creator) {
     throw new Error(`Unsupported provider: ${options.provider}`)
   }
-  const model = creator(options)
+  const model = wrapModelWithSanitizer(creator(options))
   return executeChatFlow(model, options)
 }
 
@@ -290,6 +366,6 @@ export async function getAgentResponse(options: AgentOptions) {
   if (!creator) {
     throw new Error(`Unsupported provider: ${options.provider}`)
   }
-  const model = creator(options)
+  const model = wrapModelWithSanitizer(creator(options))
   return executeAgentFlow(model, options)
 }
