@@ -25,6 +25,10 @@ export type WordToolName =
   | 'goToBookmark'
   | 'insertContentControl'
   | 'findText'
+  | 'getTableData'
+  | 'updateTableCell'
+  | 'addTableRow'
+  | 'insertHtml'
 
 const wordToolDefinitions: Record<WordToolName, WordToolDefinition> = {
   getSelectedText: {
@@ -828,6 +832,185 @@ const wordToolDefinitions: Record<WordToolName, WordToolDefinition> = {
           null,
           2,
         )
+      })
+    },
+  },
+
+  getTableData: {
+    name: 'getTableData',
+    description:
+      'Get the text contents of all tables in the document, or a specific table if index is provided. Use this to read existing work packages.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        tableIndex: {
+          type: 'number',
+          description: 'Optional index of the specific table to read (0-based). If omitted, reads all tables.',
+        },
+      },
+      required: [],
+    },
+    execute: async args => {
+      const { tableIndex } = args
+      return Word.run(async context => {
+        const tables = context.document.body.tables
+        tables.load(['items'])
+        await context.sync()
+
+        if (tableIndex !== undefined) {
+          if (tableIndex < 0 || tableIndex >= tables.items.length) {
+            return `Error: Table index ${tableIndex} out of bounds. Document has ${tables.items.length} tables.`
+          }
+          const table = tables.items[tableIndex]
+          table.load(['rowCount', 'values'])
+          await context.sync()
+          return JSON.stringify(
+            {
+              index: tableIndex,
+              rowCount: table.rowCount,
+              data: table.values,
+            },
+            null,
+            2,
+          )
+        }
+
+        const tableInfos = []
+        for (let i = 0; i < tables.items.length; i++) {
+          const table = tables.items[i]
+          table.load(['rowCount', 'values'])
+          await context.sync()
+
+          tableInfos.push({
+            index: i,
+            rowCount: table.rowCount,
+            data: table.values,
+          })
+        }
+
+        return JSON.stringify(
+          {
+            tableCount: tables.items.length,
+            tables: tableInfos,
+          },
+          null,
+          2,
+        )
+      })
+    },
+  },
+
+  updateTableCell: {
+    name: 'updateTableCell',
+    description: 'Update the text content of a specific cell in an existing table.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        tableIndex: {
+          type: 'number',
+          description: 'The index of the table (0-based). Use getTableData to find the correct index.',
+        },
+        rowIndex: {
+          type: 'number',
+          description: 'The index of the row (0-based).',
+        },
+        columnIndex: {
+          type: 'number',
+          description: 'The index of the column (0-based).',
+        },
+        text: {
+          type: 'string',
+          description: 'The new text to insert into the cell.',
+        },
+      },
+      required: ['tableIndex', 'rowIndex', 'columnIndex', 'text'],
+    },
+    execute: async args => {
+      const { tableIndex, rowIndex, columnIndex, text } = args
+      return Word.run(async context => {
+        const tables = context.document.body.tables
+        tables.load(['items'])
+        await context.sync()
+
+        if (tableIndex < 0 || tableIndex >= tables.items.length) {
+          return `Error: Table index ${tableIndex} out of bounds.`
+        }
+
+        const table = tables.items[tableIndex]
+        const cell = table.getCell(rowIndex, columnIndex)
+
+        cell.body.insertText(text, 'Replace')
+        await context.sync()
+
+        return `Successfully updated cell (${rowIndex}, ${columnIndex}) in table ${tableIndex}`
+      })
+    },
+  },
+
+  addTableRow: {
+    name: 'addTableRow',
+    description: 'Add a new row to the end of an existing table.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        tableIndex: {
+          type: 'number',
+          description: 'The index of the table (0-based).',
+        },
+        values: {
+          type: 'array',
+          description: 'An array of strings representing the cell values for the new row.',
+          items: { type: 'string' },
+        },
+      },
+      required: ['tableIndex', 'values'],
+    },
+    execute: async args => {
+      const { tableIndex, values } = args
+      return Word.run(async context => {
+        const tables = context.document.body.tables
+        tables.load(['items'])
+        await context.sync()
+
+        if (tableIndex < 0 || tableIndex >= tables.items.length) {
+          return `Error: Table index ${tableIndex} out of bounds.`
+        }
+
+        const table = tables.items[tableIndex]
+        table.addRows('End', 1, [values])
+        await context.sync()
+
+        return `Successfully added row to table ${tableIndex}`
+      })
+    },
+  },
+
+  insertHtml: {
+    name: 'insertHtml',
+    description:
+      'Insert HTML-formatted text at the current cursor position. Useful for inserting rich text, bold/italic formatting, and headings.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        html: {
+          type: 'string',
+          description: 'The HTML string to insert (e.g., "<b>bold</b> and <i>italic</i>").',
+        },
+        location: {
+          type: 'string',
+          description: 'Where to insert: "Start", "End", "Before", "After", or "Replace"',
+          enum: ['Start', 'End', 'Before', 'After', 'Replace'],
+        },
+      },
+      required: ['html'],
+    },
+    execute: async args => {
+      const { html, location = 'End' } = args
+      return Word.run(async context => {
+        const range = context.document.getSelection()
+        range.insertHtml(html, location as Word.InsertLocation)
+        await context.sync()
+        return `Successfully inserted HTML at ${location}`
       })
     },
   },

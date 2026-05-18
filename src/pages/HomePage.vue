@@ -137,8 +137,8 @@
               </div>
             </div>
           </div>
-          <div v-if="loading && agentStatus" class="flex items-center gap-2 text-sm text-secondary animate-pulse">
-            <LoaderCircle class="w-4 h-4 animate-spin" />
+          <div v-if="loading && agentStatus" class="flex animate-pulse items-center gap-2 text-sm text-secondary">
+            <LoaderCircle class="h-4 w-4 animate-spin" />
             <span>{{ agentStatus }}</span>
           </div>
         </div>
@@ -242,6 +242,7 @@ import {
   FileText,
   Globe,
   History,
+  LoaderCircle,
   MessageSquare,
   Plus,
   Send,
@@ -249,7 +250,6 @@ import {
   Sparkle,
   Sparkles,
   Square,
-  LoaderCircle,
 } from 'lucide-vue-next'
 import { v4 as uuidv4 } from 'uuid'
 import { computed, nextTick, onBeforeMount, ref, watch } from 'vue'
@@ -311,6 +311,10 @@ const allWordToolNames: WordToolName[] = [
   'goToBookmark',
   'insertContentControl',
   'findText',
+  'getTableData',
+  'updateTableCell',
+  'addTableRow',
+  'insertHtml',
 ]
 
 const allGeneralToolNames: GeneralToolName[] = ['fetchWebContent', 'searchWeb', 'getCurrentDate', 'calculateMath']
@@ -693,6 +697,10 @@ const toolActionNames: Record<string, string> = {
   goToBookmark: 'Navigating to bookmark...',
   insertContentControl: 'Inserting content control...',
   findText: 'Searching for text...',
+  getTableData: 'Reading table data...',
+  updateTableCell: 'Updating table cell...',
+  addTableRow: 'Adding table row...',
+  insertHtml: 'Inserting rich formatting...',
   fetchWebContent: 'Browsing the web...',
   searchWeb: 'Searching the web...',
   getCurrentDate: 'Checking current date...',
@@ -791,7 +799,7 @@ async function processChat(userMessage: HumanMessage, systemMessage?: string) {
         agentStatus.value = toolActionNames[toolName] || `Using ${toolName}...`
         scrollToBottom()
       },
-      onToolResult: (toolName: string, _result: string) => {
+      onToolResult: (_toolName: string, _result: string) => {
         // Update with tool result
         agentStatus.value = 'Analyzing results...'
         scrollToBottom()
