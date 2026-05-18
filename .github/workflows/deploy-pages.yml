@@ -1,0 +1,38 @@
+name: Deploy to External GitHub Pages
+
+on:
+  push:
+    tags:
+      - '*' # Triggers automatically when you push a new version tag (e.g., v2.0.3)
+  workflow_dispatch: # Allows you to run it manually from the Actions tab
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'yarn'
+
+      - name: Install Dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build Project
+        run: yarn build
+        env:
+          VITE_BASE_PATH: '/' # Adjust this if you host in a subfolder instead of the root
+
+      - name: Deploy to External Repository
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          personal_token: ${{ secrets.DEPLOY_PAT }}
+          external_repository: lufire/lufire.github.io
+          publish_branch: main # Change to 'master' if your lufire.github.io uses master as its default branch
+          publish_dir: ./dist
+          keep_files: false
+          commit_message: "Deploy from word-GPT-Plus ${{ github.sha }}"
