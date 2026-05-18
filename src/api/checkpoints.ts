@@ -36,7 +36,7 @@ class LangGraphDB extends Dexie {
   nodes!: Table<Node, string>
 
   constructor() {
-    super('LangGraphDB')
+    super('LangGraphDB_v2')
     this.version(2)
       .stores({
         checkpoints: '[thread_id+checkpoint_id], thread_id',

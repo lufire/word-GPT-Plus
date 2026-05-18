@@ -53,30 +53,40 @@ export const availableAPIs: IStringKeyMap = {
 
 // official API 可用的模型
 export const availableModels: string[] = [
-  'gpt-5.2',
-  'gpt-5.1',
-  'gpt-5.1-mini',
-  'gpt-5',
+  'gpt-5.5',
+  'gpt-5.5-pro',
+  'gpt-5.4',
+  'gpt-5.4-pro',
+  'gpt-5.4-mini',
+  'gpt-5.4-nano',
   'gpt-5-mini',
   'gpt-5-nano',
+  'gpt-5.2',
+  'gpt-5.2-pro',
+  'gpt-5.1',
+  'gpt-5-pro',
+  'gpt-5',
   'gpt-4.1',
   'gpt-4.1-mini',
-  'gpt-4.1-nano',
   'gpt-4o',
-  'o1',
+  'gpt-4o-mini',
+  'o3-pro',
+  'gpt-5.3-chat-latest',
+  'gpt-5.2-chat-latest',
+  'chat-latest',
   'o3',
 ]
 
 // Gemini API 可用的模型
 export const availableModelsForGemini: string[] = [
-  'gemini-3-pro-preview',
+  'gemini-3.1-pro-preview',
   'gemini-3-flash-preview',
+  'gemini-3.1-flash-lite',
   'gemini-2.5-pro',
   'gemini-2.5-flash',
   'gemini-2.5-flash-lite',
   'gemini-2.0-flash',
-  'gemini-2.0-flash-lite',
-  'aqa',
+  'gemini-2.0-flash-lite'
 ]
 
 // Ollama API 可用的模型
@@ -188,8 +198,10 @@ export const buildInPrompt = {
   },
 }
 
+import { localStorageKey } from './enum'
+
 export const getBuiltInPrompt = () => {
-  const stored = localStorage.getItem('customBuiltInPrompts')
+  const stored = localStorage.getItem(localStorageKey.customBuiltInPrompts)
   if (!stored) {
     return buildInPrompt
   }

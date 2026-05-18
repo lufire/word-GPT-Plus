@@ -452,6 +452,7 @@ import SettingSection from '@/components/SettingSection.vue'
 import SingleSelect from '@/components/SingleSelect.vue'
 import { getLabel, getPlaceholder } from '@/utils/common'
 import { availableAPIs, buildInPrompt } from '@/utils/constant'
+import { localStorageKey } from '@/utils/enum'
 import { getGeneralToolDefinitions } from '@/utils/generalTools'
 import useSettingForm from '@/utils/settingForm'
 import { Setting_Names, SettingNames, settingPreset } from '@/utils/settingPreset'
@@ -644,13 +645,13 @@ const addWatch = () => {
 }
 
 const loadPrompts = () => {
-  const stored = localStorage.getItem('savedPrompts')
+  const stored = localStorage.getItem(localStorageKey.savedPrompts)
   if (stored) {
     try {
       savedPrompts.value = JSON.parse(stored)
       return
     } catch {
-      localStorage.removeItem('savedPrompts')
+      localStorage.removeItem(localStorageKey.savedPrompts)
     }
   }
   savedPrompts.value = [
@@ -665,7 +666,7 @@ const loadPrompts = () => {
 }
 
 const savePromptsToStorage = () => {
-  localStorage.setItem('savedPrompts', JSON.stringify(savedPrompts.value))
+  localStorage.setItem(localStorageKey.savedPrompts, JSON.stringify(savedPrompts.value))
 }
 
 const addNewPrompt = () => {
@@ -710,7 +711,7 @@ const deletePrompt = (id: string) => {
 
 // Built-in prompts functions
 const loadBuiltInPrompts = () => {
-  const stored = localStorage.getItem('customBuiltInPrompts')
+  const stored = localStorage.getItem(localStorageKey.customBuiltInPrompts)
   if (stored) {
     try {
       const customPrompts = JSON.parse(stored)
@@ -739,7 +740,7 @@ const saveBuiltInPrompts = () => {
       user: builtInPromptsData.value[typedKey].user('${text}', '${language}'),
     }
   })
-  localStorage.setItem('customBuiltInPrompts', JSON.stringify(customPrompts))
+  localStorage.setItem(localStorageKey.customBuiltInPrompts, JSON.stringify(customPrompts))
 }
 
 const toggleEditBuiltinPrompt = (key: BuiltinPromptKey) => {
@@ -791,8 +792,8 @@ const getUserPromptPreview = (userFunc: (text: string, language: string) => stri
 }
 
 const loadToolPreferences = () => {
-  const wordTools = localStorage.getItem('enabledWordTools')
-  const generalTools = localStorage.getItem('enabledGeneralTools')
+  const wordTools = localStorage.getItem(localStorageKey.enabledWordTools)
+  const generalTools = localStorage.getItem(localStorageKey.enabledGeneralTools)
 
   if (wordTools) {
     try {
@@ -818,8 +819,8 @@ const loadToolPreferences = () => {
 }
 
 const saveToolPreferences = () => {
-  localStorage.setItem('enabledWordTools', JSON.stringify([...enabledWordTools.value]))
-  localStorage.setItem('enabledGeneralTools', JSON.stringify([...enabledGeneralTools.value]))
+  localStorage.setItem(localStorageKey.enabledWordTools, JSON.stringify([...enabledWordTools.value]))
+  localStorage.setItem(localStorageKey.enabledGeneralTools, JSON.stringify([...enabledGeneralTools.value]))
 }
 
 const toggleTool = (toolName: string, isWordTool: boolean) => {

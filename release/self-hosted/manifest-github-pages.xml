@@ -12,7 +12,7 @@
   <Id>ea8d7593-0344-4436-9200-48c2a470adcf</Id>
 
   <!--Version. Updates from the store only get triggered if there is a version change. -->
-  <Version>1.0.0.0</Version>
+  <Version>1.0.0.2</Version>
   <ProviderName>Kuingsmile</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <!-- The display name of your add-in. Used on the store and various places of the Office UI such as the add-ins dialog. -->
@@ -38,7 +38,7 @@
     <Host Name="Document" />
   </Hosts>
   <DefaultSettings>
-    <SourceLocation DefaultValue="https://lufire.github.io/index.html" />
+    <SourceLocation DefaultValue="https://lufire.github.io/index.html?v=20260518-2" />
   </DefaultSettings>
   <!-- End TaskPane Mode integration.  -->
 
@@ -124,8 +124,8 @@
       </bt:Images>
       <bt:Urls>
         <bt:Url id="GetStarted.LearnMoreUrl" DefaultValue="https://go.microsoft.com/fwlink/?LinkId=276812" />
-        <bt:Url id="Commands.Url" DefaultValue="https://lufire.github.io/commands.html" />
-        <bt:Url id="Taskpane.Url" DefaultValue="https://lufire.github.io/index.html" />
+        <bt:Url id="Commands.Url" DefaultValue="https://lufire.github.io/commands.html?v=20260518-2" />
+        <bt:Url id="Taskpane.Url" DefaultValue="https://lufire.github.io/index.html?v=20260518-2" />
       </bt:Urls>
       <!-- ShortStrings max characters==125. -->
       <bt:ShortStrings>

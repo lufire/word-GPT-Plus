@@ -329,7 +329,7 @@ const enabledWordTools = ref<WordToolName[]>(loadEnabledWordTools())
 const enabledGeneralTools = ref<GeneralToolName[]>(loadEnabledGeneralTools())
 
 function loadEnabledWordTools(): WordToolName[] {
-  const stored = localStorage.getItem('enabledWordTools')
+  const stored = localStorage.getItem(localStorageKey.enabledWordTools)
   if (stored) {
     try {
       const parsed = JSON.parse(stored)
@@ -342,7 +342,7 @@ function loadEnabledWordTools(): WordToolName[] {
 }
 
 function loadEnabledGeneralTools(): GeneralToolName[] {
-  const stored = localStorage.getItem('enabledGeneralTools')
+  const stored = localStorage.getItem(localStorageKey.enabledGeneralTools)
   if (stored) {
     try {
       const parsed = JSON.parse(stored)
@@ -361,7 +361,7 @@ function getActiveTools() {
 }
 
 function loadSavedPrompts() {
-  const stored = localStorage.getItem('savedPrompts')
+  const stored = localStorage.getItem(localStorageKey.savedPrompts)
   if (stored) {
     try {
       savedPrompts.value = JSON.parse(stored)
@@ -796,7 +796,7 @@ async function processChat(userMessage: HumanMessage, systemMessage?: string) {
 
   if (errorIssue.value) {
     if (typeof errorIssue.value === 'string') {
-      messageUtil.error(t(errorIssue.value))
+      messageUtil.error(errorIssue.value === 'recursionLimitExceeded' ? t(errorIssue.value) : errorIssue.value)
     } else {
       messageUtil.error(t('somethingWentWrong'))
     }

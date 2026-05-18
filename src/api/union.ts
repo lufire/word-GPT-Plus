@@ -20,7 +20,7 @@ import {
 
 const ModelCreators: Record<string, (opts: any) => BaseChatModel> = {
   official: (opts: OpenAIOptions) => {
-    const modelName = opts.model || 'gpt-5'
+    const modelName = opts.model || 'gpt-4o-mini'
     return new ChatOpenAI({
       modelName,
       configuration: {
@@ -51,7 +51,7 @@ const ModelCreators: Record<string, (opts: any) => BaseChatModel> = {
 
   gemini: (opts: GeminiOptions) => {
     return new ChatGoogleGenerativeAI({
-      model: opts.geminiModel ?? 'gemini-3-pro-preview',
+      model: opts.geminiModel ?? 'gemini-2.5-flash',
       apiKey: opts.geminiAPIKey,
       temperature: opts.temperature ?? 0.7,
       maxOutputTokens: opts.maxTokens ?? 800,
@@ -73,6 +73,54 @@ const ModelCreators: Record<string, (opts: any) => BaseChatModel> = {
 
 // const checkpointer = new MemorySaver()
 const checkpointer = new IndexedDBSaver()
+
+function extractErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message) {
+    const nestedError = (error as Error & { cause?: any }).cause?.error?.message
+    return nestedError || error.message
+  }
+
+  if (error && typeof error === 'object') {
+    const message = (error as { message?: unknown }).message
+    if (typeof message === 'string' && message) {
+      return message
+    }
+
+    const nestedMessage = (error as { error?: { message?: unknown } }).error?.message
+    if (typeof nestedMessage === 'string' && nestedMessage) {
+      return nestedMessage
+    }
+  }
+
+  return 'Something went wrong while calling the model.'
+}
+
+function extractTextContent(content: unknown): string {
+  if (typeof content === 'string') {
+    return content
+  }
+
+  if (!Array.isArray(content)) {
+    return ''
+  }
+
+  return content
+    .map(part => {
+      if (typeof part === 'string') {
+        return part
+      }
+
+      if (part && typeof part === 'object') {
+        const text = (part as { text?: unknown }).text
+        if (typeof text === 'string') {
+          return text
+        }
+      }
+
+      return ''
+    })
+    .join('')
+}
 
 async function executeChatFlow(model: BaseChatModel, options: ProviderOptions): Promise<void> {
   try {
@@ -102,7 +150,7 @@ async function executeChatFlow(model: BaseChatModel, options: ProviderOptions): 
         break
       }
 
-      const content = typeof chunk[0].content === 'string' ? chunk[0].content : ''
+      const content = extractTextContent(chunk[0]?.content)
       fullContent += content
       options.onStream(fullContent)
     }
@@ -111,7 +159,7 @@ async function executeChatFlow(model: BaseChatModel, options: ProviderOptions): 
       // Don't mark as error if intentionally aborted
       throw error
     }
-    options.errorIssue.value = true
+    options.errorIssue.value = extractErrorMessage(error)
     console.error(error)
   } finally {
     options.loading.value = false
@@ -199,7 +247,7 @@ async function executeAgentFlow(model: BaseChatModel, options: AgentOptions): Pr
 
       // Handle AI message content (the final response)
       if (msg._getType?.() === 'ai' && msg.content) {
-        const content = typeof msg.content === 'string' ? msg.content : ''
+        const content = extractTextContent(msg.content)
         if (content && (!msg.tool_calls || msg.tool_calls.length === 0)) {
           fullContent = content
           console.log('[Agent] AI response:', {
@@ -218,6 +266,8 @@ async function executeAgentFlow(model: BaseChatModel, options: AgentOptions): Pr
     }
     if (error.name === 'GraphRecursionError') {
       options.errorIssue.value = 'recursionLimitExceeded'
+    } else {
+      options.errorIssue.value = extractErrorMessage(error)
     }
     // TODO: more specific error handling based on LangGraph error
     console.error(error)
